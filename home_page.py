@@ -95,10 +95,15 @@ class ApplicationSeahawks:
         # Ajouter le label de version sous les autres éléments
         self.label_version = tk.Label(self.cadre_accueil, text="Version: récupération...", font=("Arial", 10), fg="white", bg="#212121")
         self.label_version.pack(pady=5)
-
-        # Lancer la récupération de la version dans un thread pour ne pas bloquer l'interface
+        
+        # Récupère la version locale dans un thread
         threading.Thread(target=self.update_version_label, daemon=True).start()
 
+        # Lancer la vérification de mise à jour (script update.py) en tâche de fond
+        threading.Thread(target=self.lancer_update_script, daemon=True).start()
+    
+    
+        
     def _setup_tableau_de_bord(self):
         """Configure le contenu de l'onglet Tableau de bord."""
         self.tableau_de_bord_text = tk.Text(self.cadre_tableau_de_bord, height=20, width=80, wrap=tk.WORD, bg="#f4f4f4", fg="black", font=("Arial", 12))
@@ -175,23 +180,30 @@ class ApplicationSeahawks:
         local_ip = self.obtenir_ip_locale()
         hostname = socket.gethostname()
         self.label_host_info.config(text=f"Nom de l'hôte : {hostname} | Adresse IP locale : {local_ip}")
-
+    
+    def lancer_update_script(self):
+        # Exécute le script de mise à jour
+        subprocess.run(["python", "update.py"])
+    
+    def get_local_version(self):
+        version_file = "version.txt"
+        if os.path.exists(version_file):
+            try:
+                with open(version_file, "r", encoding="utf-8") as f:
+                    version = f.readline().strip()
+                    if not version or version in ["0.0.0", "0"]:
+                        return None
+                    return version
+            except:
+                return None
+        return None
+    
     def update_version_label(self):
-        """Récupère la version via l'API GitHub et met à jour le label."""
-        try:
-            url = "https://api.github.com/repos/SgBlood/MSPR-511/releases/latest"
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                # Le tag se trouve dans data["tag_name"]
-                # Le titre de la release se trouve dans data["name"]
-                release_title = data.get("name", "Inconnue")
-            else:
-                release_title = "Non disponible (code HTTP: {})".format(response.status_code)
-        except Exception as e:
-            release_title = f"Erreur: {e}"
-        
-        self.master.after(0, lambda: self.label_version.config(text=f"Version: {release_title}"))
+        local_version = self.get_local_version()
+        if not local_version:
+            local_version = "Version inconnue"
+
+        self.master.after(0, lambda: self.label_version.config(text=f"Version: {local_version}"))
 
 #+---------------------------------------------+#
 #|                                             |#
