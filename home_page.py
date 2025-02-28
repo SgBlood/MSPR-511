@@ -177,21 +177,23 @@ class ApplicationSeahawks:
         self.label_host_info.config(text=f"Nom de l'hôte : {hostname} | Adresse IP locale : {local_ip}")
 
     def update_version_label(self):
-        """Récupère la version via l'API GitHub (ou GitLab) et met à jour le label."""
+        """Récupère la version via l'API GitHub et met à jour le label."""
         try:
-            # Remplacez 'username' et 'repository' par les valeurs appropriées
-            url = "https://api.github.com/repos/username/repository/releases/latest"
+            url = "https://api.github.com/repos/SgBlood/MSPR-511/releases/latest"
             response = requests.get(url, timeout=5)
             if response.status_code == 200:
                 data = response.json()
-                version = data.get("tag_name", "Inconnue")
+                # Le tag se trouve dans data["tag_name"]
+                # Le titre de la release se trouve dans data["name"]
+                release_title = data.get("name", "Inconnue")
             else:
-                version = "Non disponible"
+                release_title = "Non disponible (code HTTP: {})".format(response.status_code)
         except Exception as e:
-            version = f"Erreur: {e}"
+            release_title = f"Erreur: {e}"
         
-        # Mise à jour du label dans le thread principal
-        self.master.after(0, lambda: self.label_version.config(text=f"Version: {version}"))
+        self.master.after(0, lambda: self.label_version.config(text=f"Version: {release_title}"))
+
+
 
 #+---------------------------------------------+#
 #|                                             |#
