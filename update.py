@@ -4,7 +4,7 @@ import requests
 import tkinter as tk
 from tkinter import messagebox
 from dotenv import load_dotenv
-import sys
+import sys  # Assurez-vous d'importer sys
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -35,7 +35,7 @@ def get_local_version():
     if os.path.exists(LOCAL_VERSION_FILE):
         try:
             with open(LOCAL_VERSION_FILE, "r", encoding="utf-8") as f:
-                version = f.readline().strip()  # Lire uniquement la première ligne
+                version = f.readline().strip()  # Lire uniquement la première ligne proprement
                 if not version or version in ["0.0.0", "0"]:
                     print("❌ Version locale invalide. Réinitialisation nécessaire.")
                     return None
@@ -59,8 +59,9 @@ def compare_versions(local_version, latest_version):
         print(f"❌ Erreur lors de la comparaison des versions : {e}")
         return False
 
-def restart_app():
-    """Redémarre l'application en relançant le script."""
+def restart_app(win):
+    """Ferme la fenêtre de redémarrage et relance l'application."""
+    win.destroy()  # Ferme la fenêtre de redémarrage
     python = sys.executable
     os.execl(python, python, *sys.argv)
 
@@ -73,7 +74,8 @@ def show_restart_window():
     label = tk.Label(restart_win, text="", font=("Arial", 12))
     label.pack(padx=20, pady=10)
     
-    button = tk.Button(restart_win, text="Redémarrer maintenant", command=lambda: restart_app())
+    # Bouton pour redémarrer immédiatement
+    button = tk.Button(restart_win, text="Redémarrer maintenant", command=lambda: restart_app(restart_win))
     button.pack(pady=10)
     
     # Délai de redémarrage (5 secondes) dans une variable mutable
@@ -85,7 +87,7 @@ def show_restart_window():
             countdown[0] -= 1
             restart_win.after(1000, update_countdown)
         else:
-            restart_app()
+            restart_app(restart_win)
             
     update_countdown()
     restart_win.mainloop()
@@ -97,16 +99,17 @@ def update_application():
         subprocess.run(["git", "fetch", "--all"], check=True)
         subprocess.run(["git", "reset", "--hard", "origin/main"], check=True)
         subprocess.run(["git", "pull", "origin", "main"], check=True)
-        
+
         # Mise à jour du fichier version.txt
         latest_version = get_latest_gitlab_version()
         if latest_version:
             with open(LOCAL_VERSION_FILE, "w", encoding="utf-8") as f:
                 f.write(latest_version)
-        
+
         print("\n✅ Mise à jour terminée.")
         # Afficher la fenêtre de redémarrage avec compte à rebours
         show_restart_window()
+
     except subprocess.CalledProcessError as e:
         print(f"\n❌ Erreur lors de la mise à jour : {e}")
         messagebox.showerror("Erreur", f"❌ Erreur lors de la mise à jour : {e}")
@@ -128,7 +131,8 @@ def check_for_update():
         
         if local_version != latest_version:
             root = tk.Tk()
-            root.withdraw()  # Cacher la fenêtre principale
+            root.withdraw()  # Cacher la fenêtre principale Tkinter
+            
             response = messagebox.askyesno(
                 "Mise à jour disponible",
                 f"🚀 Nouvelle version détectée : {latest_version}\nActuelle : {local_version}\n\nVoulez-vous mettre à jour ?"
