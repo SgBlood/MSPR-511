@@ -4,7 +4,7 @@ import requests
 import tkinter as tk
 from tkinter import messagebox
 from dotenv import load_dotenv
-import sys  # Pour quitter l'application
+import sys
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -16,14 +16,18 @@ GITLAB_REPO_URL = "https://gitlab.com/mspr-5111/Seahawks_Harvester.git"
 LOCAL_VERSION_FILE = "version.txt"
 
 def get_latest_gitlab_version():
-    """Récupère la dernière version publiée sur GitLab Releases."""
+    """Récupère la dernière version publiée sur GitLab Releases et rejette une version invalide (0.0.0 ou 0)."""
     headers = {"PRIVATE-TOKEN": os.getenv("GITLAB_TOKEN")}
     try:
         response = requests.get(GITLAB_API_RELEASES_URL, headers=headers)
         if response.status_code == 200:
             data = response.json()
             if data:
-                return data[0]["tag_name"].strip()  # Ex: "v1.0.1"
+                version = data[0]["tag_name"].strip()  # Ex: "v1.0.1"
+                if version in ["0", "0.0.0"]:
+                    print("❌ Version distante invalide (0.0.0).")
+                    return None
+                return version
         print(f"❌ Erreur GitLab (Code: {response.status_code}): {response.text}")
         return None
     except Exception as e:
@@ -31,13 +35,13 @@ def get_latest_gitlab_version():
         return None
 
 def get_local_version():
-    """Lit la version locale depuis version.txt et empêche une valeur vide ou invalide."""
+    """Lit la version locale depuis version.txt et rejette une valeur vide ou égale à zéro."""
     if os.path.exists(LOCAL_VERSION_FILE):
         try:
             with open(LOCAL_VERSION_FILE, "r", encoding="utf-8") as f:
-                version = f.readline().strip()  # Lire uniquement la première ligne proprement
-                if not version or version in ["0.0.0", "0"]:
-                    print("❌ Version locale invalide. Réinitialisation nécessaire.")
+                version = f.readline().strip()  # Lire la première ligne
+                if not version or version in ["0", "0.0.0"]:
+                    print("❌ Version locale invalide (vide ou zéro).")
                     return None
                 return version
         except Exception as e:
@@ -46,21 +50,27 @@ def get_local_version():
     return None
 
 def compare_versions(local_version, latest_version):
-    """Compare les versions pour s'assurer que la locale n'est pas supérieure à celle de GitLab."""
+    """Compare les versions sous forme de tuples pour s'assurer que la version locale n'est pas supérieure."""
     try:
-        # Conversion en tuples (ex: "v1.0.1" -> (1, 0, 1))
         local_tuple = tuple(map(int, local_version.lstrip('v').split('.')))
         latest_tuple = tuple(map(int, latest_version.lstrip('v').split('.')))
         if local_tuple > latest_tuple:
-            print(f"❌ Version locale {local_version} ne peut pas être supérieure à la version GitLab {latest_version}.")
+            print(f"❌ Version locale {local_version} ne peut pas être supérieure à la version distante {latest_version}.")
             return False
         return True
     except Exception as e:
         print(f"❌ Erreur lors de la comparaison des versions : {e}")
         return False
 
+def quit_app(win):
+    """Ferme toutes les fenêtres Tkinter pour quitter l'application proprement."""
+    win.destroy()
+    # Détruire la fenêtre principale si elle existe
+    if tk._default_root is not None:
+        tk._default_root.destroy()
+
 def show_restart_window():
-    """Affiche une fenêtre informant l'utilisateur qu'il doit redémarrer l'application et propose un bouton 'Quitter'."""
+    """Affiche une fenêtre indiquant que l'application doit être redémarrée, avec un bouton 'Quitter'."""
     restart_win = tk.Tk()
     restart_win.title("Redémarrage requis")
     restart_win.geometry("400x150")
@@ -68,13 +78,13 @@ def show_restart_window():
     label = tk.Label(restart_win, text="Mise à jour terminée.\nVeuillez redémarrer l'application.", font=("Arial", 12))
     label.pack(padx=20, pady=20)
     
-    button = tk.Button(restart_win, text="Quitter", command=lambda: sys.exit(0))
+    button = tk.Button(restart_win, text="Quitter", command=lambda: quit_app(restart_win))
     button.pack(pady=10)
     
     restart_win.mainloop()
 
 def update_application():
-    """Met à jour l'application via Git et affiche la fenêtre demandant de redémarrer."""
+    """Effectue un git pull pour mettre à jour l'application et, ensuite, affiche la fenêtre de redémarrage."""
     print("\n🔄 Téléchargement et application de la mise à jour...\n")
     try:
         subprocess.run(["git", "fetch", "--all"], check=True)
@@ -90,21 +100,26 @@ def update_application():
         print("\n✅ Mise à jour terminée.")
         # Afficher la fenêtre demandant de redémarrer
         show_restart_window()
-
     except subprocess.CalledProcessError as e:
         print(f"\n❌ Erreur lors de la mise à jour : {e}")
         messagebox.showerror("Erreur", f"❌ Erreur lors de la mise à jour : {e}")
 
 def check_for_update():
-    """Vérifie la version et affiche une pop-up pour la mise à jour."""
+    """Vérifie la version et, si une mise à jour est nécessaire, la propose à l'utilisateur."""
     latest_version = get_latest_gitlab_version()
     local_version = get_local_version()
     
+    # Si la version locale est invalide, forcer la mise à jour
     if not local_version:
-        print("❌ Impossible de récupérer la version locale. Mise à jour forcée.")
+        print("❌ Impossible de récupérer une version locale valide. Mise à jour forcée.")
         update_application()
         return
     
+    # Si la version distante est invalide, ne pas tenter de mise à jour
+    if not latest_version:
+        messagebox.showerror("Erreur", "La version distante est invalide (0.0.0 ou absente).")
+        return
+
     if latest_version and local_version:
         if not compare_versions(local_version, latest_version):
             messagebox.showerror("Erreur de version", f"❌ Version locale {local_version} incorrecte.\nVeuillez réinstaller l'application.")
