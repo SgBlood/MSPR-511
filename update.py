@@ -60,11 +60,13 @@ def compare_versions(local_version, latest_version):
         return False
 
 def restart_app(win):
-    """Ferme la fenêtre de redémarrage et relance l'application."""
+    """Ferme la fenêtre de redémarrage, lance une nouvelle instance et termine le processus actuel."""
     win.destroy()  # Ferme la fenêtre de redémarrage
     python = sys.executable
-    os.execl(python, python, *sys.argv)
-
+    # Lancer une nouvelle instance de l'application
+    subprocess.Popen([python] + sys.argv)
+    sys.exit(0)
+    
 def show_restart_window():
     """Affiche une fenêtre de redémarrage avec un compte à rebours de 5 secondes."""
     restart_win = tk.Tk()
