@@ -193,8 +193,6 @@ class ApplicationSeahawks:
         
         self.master.after(0, lambda: self.label_version.config(text=f"Version: {release_title}"))
 
-
-
 #+---------------------------------------------+#
 #|                                             |#
 #|                   PING                      |#
