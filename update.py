@@ -4,7 +4,7 @@ import requests
 import tkinter as tk
 from tkinter import messagebox
 from dotenv import load_dotenv
-import sys  # Assurez-vous d'importer sys
+import sys  # Pour quitter l'application
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -59,43 +59,22 @@ def compare_versions(local_version, latest_version):
         print(f"❌ Erreur lors de la comparaison des versions : {e}")
         return False
 
-def restart_app(win):
-    """Ferme la fenêtre de redémarrage, lance une nouvelle instance et termine le processus actuel."""
-    win.destroy()  # Ferme la fenêtre de redémarrage
-    python = sys.executable
-    # Lancer une nouvelle instance de l'application
-    subprocess.Popen([python] + sys.argv)
-    sys.exit(0)
-    
 def show_restart_window():
-    """Affiche une fenêtre de redémarrage avec un compte à rebours de 5 secondes."""
+    """Affiche une fenêtre informant l'utilisateur qu'il doit redémarrer l'application et propose un bouton 'Quitter'."""
     restart_win = tk.Tk()
-    restart_win.title("Redémarrage")
+    restart_win.title("Redémarrage requis")
     restart_win.geometry("400x150")
     
-    label = tk.Label(restart_win, text="", font=("Arial", 12))
-    label.pack(padx=20, pady=10)
+    label = tk.Label(restart_win, text="Mise à jour terminée.\nVeuillez redémarrer l'application.", font=("Arial", 12))
+    label.pack(padx=20, pady=20)
     
-    # Bouton pour redémarrer immédiatement
-    button = tk.Button(restart_win, text="Redémarrer maintenant", command=lambda: restart_app(restart_win))
+    button = tk.Button(restart_win, text="Quitter", command=lambda: sys.exit(0))
     button.pack(pady=10)
     
-    # Délai de redémarrage (5 secondes) dans une variable mutable
-    countdown = [5]
-    
-    def update_countdown():
-        if countdown[0] > 0:
-            label.config(text=f"Mise à jour terminée.\nL'application va redémarrer dans {countdown[0]} secondes.\nOu cliquez sur 'Redémarrer maintenant'.")
-            countdown[0] -= 1
-            restart_win.after(1000, update_countdown)
-        else:
-            restart_app(restart_win)
-            
-    update_countdown()
     restart_win.mainloop()
 
 def update_application():
-    """Met à jour l'application via Git et lance le redémarrage."""
+    """Met à jour l'application via Git et affiche la fenêtre demandant de redémarrer."""
     print("\n🔄 Téléchargement et application de la mise à jour...\n")
     try:
         subprocess.run(["git", "fetch", "--all"], check=True)
@@ -109,7 +88,7 @@ def update_application():
                 f.write(latest_version)
 
         print("\n✅ Mise à jour terminée.")
-        # Afficher la fenêtre de redémarrage avec compte à rebours
+        # Afficher la fenêtre demandant de redémarrer
         show_restart_window()
 
     except subprocess.CalledProcessError as e:
