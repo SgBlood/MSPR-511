@@ -62,29 +62,8 @@ def compare_versions(local_version, latest_version):
         print(f"❌ Erreur lors de la comparaison des versions : {e}")
         return False
 
-def quit_app(win):
-    """Ferme toutes les fenêtres Tkinter pour quitter l'application proprement."""
-    win.destroy()
-    # Détruire la fenêtre principale si elle existe
-    if tk._default_root is not None:
-        tk._default_root.destroy()
-
-def show_restart_window():
-    """Affiche une fenêtre indiquant que l'application doit être redémarrée, avec un bouton 'Quitter'."""
-    restart_win = tk.Tk()
-    restart_win.title("Redémarrage requis")
-    restart_win.geometry("400x150")
-    
-    label = tk.Label(restart_win, text="Mise à jour terminée.\nVeuillez redémarrer l'application.", font=("Arial", 12))
-    label.pack(padx=20, pady=20)
-    
-    button = tk.Button(restart_win, text="Quitter", command=lambda: quit_app(restart_win))
-    button.pack(pady=10)
-    
-    restart_win.mainloop()
-
 def update_application():
-    """Effectue un git pull pour mettre à jour l'application et, ensuite, affiche la fenêtre de redémarrage."""
+    """Met à jour l'application via Git et informe l'utilisateur que la mise à jour est terminée."""
     print("\n🔄 Téléchargement et application de la mise à jour...\n")
     try:
         subprocess.run(["git", "fetch", "--all"], check=True)
@@ -98,8 +77,7 @@ def update_application():
                 f.write(latest_version)
 
         print("\n✅ Mise à jour terminée.")
-        # Afficher la fenêtre demandant de redémarrer
-        show_restart_window()
+        messagebox.showinfo("Mise à jour", "✅ Mise à jour terminée ! Veuillez relancer l'application.")
     except subprocess.CalledProcessError as e:
         print(f"\n❌ Erreur lors de la mise à jour : {e}")
         messagebox.showerror("Erreur", f"❌ Erreur lors de la mise à jour : {e}")
@@ -115,7 +93,7 @@ def check_for_update():
         update_application()
         return
     
-    # Si la version distante est invalide, ne pas tenter de mise à jour
+    # Si la version distante est invalide, afficher une erreur
     if not latest_version:
         messagebox.showerror("Erreur", "La version distante est invalide (0.0.0 ou absente).")
         return
@@ -128,7 +106,6 @@ def check_for_update():
         if local_version != latest_version:
             root = tk.Tk()
             root.withdraw()  # Cacher la fenêtre principale Tkinter
-            
             response = messagebox.askyesno(
                 "Mise à jour disponible",
                 f"🚀 Nouvelle version détectée : {latest_version}\nActuelle : {local_version}\n\nVoulez-vous mettre à jour ?"
